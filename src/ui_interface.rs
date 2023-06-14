@@ -59,6 +59,7 @@ pub fn get_id() -> String {
 #[inline]
 pub fn goto_install() {
     allow_err!(crate::run_me(vec!["--install"]));
+    std::process::exit(0);
 }
 
 #[inline]
@@ -273,23 +274,25 @@ pub fn set_option(key: String, value: String) {
         #[cfg(target_os = "macos")]
         {
             let is_stop = value == "Y";
-            if is_stop && crate::platform::macos::uninstall(true) {
+            if is_stop && crate::platform::macos::uninstall_service(true) {
                 return;
             }
         }
-        /*
-        #[cfg(any(target_os = "windows"))]
+        #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
             if crate::platform::is_installed() {
                 if value == "Y" {
-                    crate::platform::install_service().ok();
+                    if crate::platform::uninstall_service(true) {
+                        return;
+                    }
                 } else {
-                    crate::platform::uninstall_service(true).ok();
+                    if crate::platform::install_service() {
+                        return;
+                    }
                 }
                 return;
             }
         }
-        */
     }
     if value.is_empty() {
         options.remove(&key);

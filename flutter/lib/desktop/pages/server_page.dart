@@ -30,13 +30,10 @@ class _DesktopServerPageState extends State<DesktopServerPage>
   final tabController = gFFI.serverModel.tabController;
   @override
   void initState() {
-    gFFI.ffiModel.updateEventListener("");
+    gFFI.ffiModel.updateEventListener(gFFI.sessionId, "");
     windowManager.addListener(this);
     tabController.onRemoved = (_, id) {
       onRemoveId(id);
-    };
-    tabController.onSelected = (_, id) {
-      windowManager.setTitle(getWindowNameWithId(id));
     };
     super.initState();
   }
@@ -100,8 +97,17 @@ class ConnectionManagerState extends State<ConnectionManager> {
   @override
   void initState() {
     gFFI.serverModel.updateClientState();
-    gFFI.serverModel.tabController.onSelected = (index, _) =>
-        gFFI.chatModel.changeCurrentID(gFFI.serverModel.clients[index].id);
+    gFFI.serverModel.tabController.onSelected = (client_id_str) {
+      final client_id = int.tryParse(client_id_str);
+      if (client_id != null) {
+        gFFI.chatModel.changeCurrentID(client_id);
+        final client =
+            gFFI.serverModel.clients.firstWhereOrNull((e) => e.id == client_id);
+        if (client != null) {
+          windowManager.setTitle(getWindowNameWithId(client.peerId));
+        }
+      }
+    };
     gFFI.chatModel.isConnManager = true;
     super.initState();
   }
@@ -328,6 +334,7 @@ class _CmHeaderState extends State<_CmHeader>
         _time.value = _time.value + 1;
       }
     });
+    gFFI.serverModel.tabController.onSelected?.call(client.id.toString());
   }
 
   @override
@@ -752,13 +759,14 @@ class _CmControlPanel extends StatelessWidget {
             handleElevate(context);
             windowManager.minimize();
           },
-              text: 'Accept',
+              text: 'Accept and Elevate',
               icon: Icon(
                 Icons.security_rounded,
                 color: Colors.white,
                 size: 14,
               ),
-              textColor: Colors.white),
+              textColor: Colors.white,
+              tooltip: 'accept_and_elevate_btn_tooltip'),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -796,15 +804,14 @@ class _CmControlPanel extends StatelessWidget {
     ).marginOnly(bottom: buttonBottomMargin);
   }
 
-  Widget buildButton(
-    BuildContext context, {
-    required Color? color,
-    required Function() onClick,
-    Icon? icon,
-    BoxBorder? border,
-    required String text,
-    required Color? textColor,
-  }) {
+  Widget buildButton(BuildContext context,
+      {required Color? color,
+      required Function() onClick,
+      Icon? icon,
+      BoxBorder? border,
+      required String text,
+      required Color? textColor,
+      String? tooltip}) {
     Widget textWidget;
     if (icon != null) {
       textWidget = Text(
@@ -822,7 +829,7 @@ class _CmControlPanel extends StatelessWidget {
       );
     }
     final borderRadius = BorderRadius.circular(10.0);
-    return Container(
+    final btn = Container(
       height: 28,
       decoration: BoxDecoration(
           color: color, borderRadius: borderRadius, border: border),
@@ -837,7 +844,14 @@ class _CmControlPanel extends StatelessWidget {
           ],
         ),
       ),
-    ).marginAll(4);
+    );
+    return (tooltip != null
+            ? Tooltip(
+                message: translate(tooltip),
+                child: btn,
+              )
+            : btn)
+        .marginAll(4);
   }
 
   void handleDisconnect() {
