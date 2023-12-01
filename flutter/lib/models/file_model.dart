@@ -261,6 +261,7 @@ class FileController {
       required this.getOtherSideDirectoryData});
 
   String get homePath => options.value.home;
+  void set homePath(String path) => options.value.home = path;
   OverlayDialogManager? get dialogManager => rootState.target?.dialogManager;
 
   String get shortPath {
@@ -376,6 +377,11 @@ class FileController {
   }
 
   void goToHomeDirectory() {
+    if (isLocal) {
+      openDirectory(homePath);
+      return;
+    }
+    homePath = "";
     openDirectory(homePath);
   }
 
@@ -556,8 +562,10 @@ class FileController {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.warning_rounded, color: Colors.red),
-            Text(title).paddingOnly(
-              left: 10,
+            Expanded(
+              child: Text(title).paddingOnly(
+                left: 10,
+              ),
             ),
           ],
         ),
@@ -998,7 +1006,7 @@ extension JobStateDisplay on JobState {
       case JobState.none:
         return translate("Waiting");
       case JobState.inProgress:
-        return translate("Transfer File");
+        return translate("Transfer file");
       case JobState.done:
         return translate("Finished");
       case JobState.error:
@@ -1027,6 +1035,7 @@ class JobProgress {
   var to = "";
   var showHidden = false;
   var err = "";
+  int lastTransferredSize = 0;
 
   clear() {
     state = JobState.none;
